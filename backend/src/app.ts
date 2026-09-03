@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import { env } from "./lib/env";
 import jwtPlugin from "./plugins/jwt";
 import { authRoutes } from "./modules/auth/auth.routes";
+import { usersRoutes } from "./modules/users/users.routes";
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -17,6 +18,7 @@ export function buildApp() {
   app.get("/health", async () => ({ status: "ok" }));
 
   app.register(authRoutes, { prefix: "/api" });
+  app.register(usersRoutes, { prefix: "/api" });
 
   app.setErrorHandler((error, _request, reply) => {
     app.log.error(error);
