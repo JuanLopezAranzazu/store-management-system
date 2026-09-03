@@ -4,6 +4,7 @@ import { env } from "./lib/env";
 import jwtPlugin from "./plugins/jwt";
 import { authRoutes } from "./modules/auth/auth.routes";
 import { usersRoutes } from "./modules/users/users.routes";
+import { categoriesRoutes } from "./modules/categories/categories.routes";
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -19,6 +20,7 @@ export function buildApp() {
 
   app.register(authRoutes, { prefix: "/api" });
   app.register(usersRoutes, { prefix: "/api" });
+  app.register(categoriesRoutes, { prefix: "/api" });
 
   app.setErrorHandler((error, _request, reply) => {
     app.log.error(error);
