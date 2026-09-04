@@ -21,6 +21,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -35,6 +36,7 @@ export default function Categories() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ["categories"],
@@ -67,12 +69,15 @@ export default function Categories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] })
       toast.add({ title: "Categoría eliminada", type: "success" })
+      setDeleteTarget(null)
     },
-    onError: (err: any) =>
+    onError: (err: any) => {
       toast.add({
         title: err.response?.data?.message ?? "No se pudo eliminar.",
         type: "error",
-      }),
+      })
+      setDeleteTarget(null)
+    },
   })
 
   function openCreate() {
@@ -99,7 +104,7 @@ export default function Categories() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-heading text-xl font-medium tracking-tight">
             Categorías
@@ -122,7 +127,9 @@ export default function Categories() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Descripción</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Descripción
+                </TableHead>
                 <TableHead>Productos</TableHead>
                 {isAdmin && (
                   <TableHead className="text-right">Acciones</TableHead>
@@ -142,8 +149,15 @@ export default function Categories() {
               )}
               {categories?.map((category) => (
                 <TableRow key={category.id}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="font-medium">
+                    {category.name}
+                    {category.description && (
+                      <p className="line-clamp-1 text-xs font-normal text-muted-foreground sm:hidden">
+                        {category.description}
+                      </p>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">
                     {category.description || "—"}
                   </TableCell>
                   <TableCell>
@@ -165,15 +179,7 @@ export default function Categories() {
                           variant="ghost"
                           size="icon-sm"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `¿Eliminar la categoría "${category.name}"?`
-                              )
-                            ) {
-                              deleteMutation.mutate(category.id)
-                            }
-                          }}
+                          onClick={() => setDeleteTarget(category)}
                         >
                           <Trash2 />
                         </Button>
@@ -239,6 +245,35 @@ export default function Categories() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar categoría</DialogTitle>
+            <DialogDescription>
+              ¿Seguro que quieres eliminar <strong>{deleteTarget?.name}</strong>
+              ? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() =>
+                deleteTarget && deleteMutation.mutate(deleteTarget.id)
+              }
+            >
+              Eliminar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

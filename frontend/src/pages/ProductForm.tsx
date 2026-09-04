@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, Link } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { toast } from "@/components/ui/toast"
 import { ArrowLeft, Loader2 } from "lucide-react"
-
 import { api } from "@/lib/api"
 import type { Category, Product } from "@/types"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -17,9 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ImageUploader } from "@/components/products/ImageUploader"
+import { toast } from "@/components/ui/toast"
 
 const emptyForm = {
   sku: "",
@@ -38,7 +37,6 @@ export default function ProductForm() {
   const isEditing = Boolean(id)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState<string | null>(null)
 
@@ -54,21 +52,19 @@ export default function ProductForm() {
   })
 
   useEffect(() => {
-    if (!product) {
-      return
+    if (product) {
+      setForm({
+        sku: product.sku,
+        name: product.name,
+        description: product.description ?? "",
+        price: product.price,
+        cost: product.cost ?? "",
+        stock: String(product.stock),
+        minStock: String(product.minStock),
+        categoryId: product.categoryId,
+        active: product.active,
+      })
     }
-
-    setForm({
-      sku: product.sku,
-      name: product.name,
-      description: product.description ?? "",
-      price: product.price,
-      cost: product.cost ?? "",
-      stock: String(product.stock),
-      minStock: String(product.minStock),
-      categoryId: product.categoryId,
-      active: product.active,
-    })
   }, [product])
 
   const saveMutation = useMutation({
@@ -84,40 +80,28 @@ export default function ProductForm() {
         categoryId: form.categoryId,
         active: form.active,
       }
-
       if (isEditing) {
         return api.put(`/products/${id}`, payload)
       }
-
       return api.post("/products", payload)
     },
-
     onSuccess: (res) => {
-      queryClient.invalidateQueries({
-        queryKey: ["products"],
-      })
-
+      queryClient.invalidateQueries({ queryKey: ["products"] })
       toast.add({
         title: isEditing ? "Producto actualizado" : "Producto creado",
+        type: "success",
       })
-
       if (!isEditing) {
-        navigate(`/products/${res.data.id}`, {
-          replace: true,
-        })
+        navigate(`/products/${res.data.id}`, { replace: true })
       } else {
-        queryClient.invalidateQueries({
-          queryKey: ["product", id],
-        })
+        queryClient.invalidateQueries({ queryKey: ["product", id] })
       }
     },
-
-    onError: (err: any) => {
-      setError(err.response?.data?.message ?? "Ocurrió un error al guardar.")
-    },
+    onError: (err: any) =>
+      setError(err.response?.data?.message ?? "Ocurrió un error al guardar."),
   })
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     saveMutation.mutate()
@@ -128,24 +112,20 @@ export default function ProductForm() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
+      <div className="flex items-start gap-3">
         <Button
-          type="button"
           variant="ghost"
-          size="icon"
-          aria-label="Volver a productos"
-          onClick={() => navigate("/products")}
+          size="icon-sm"
+          className="mt-0.5 shrink-0"
+          render={<Link to="/products" />}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft />
         </Button>
-
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
+        <div className="min-w-0">
+          <h1 className="font-heading text-xl font-medium tracking-tight">
             {isEditing ? "Editar producto" : "Nuevo producto"}
           </h1>
-
           <p className="text-sm text-muted-foreground">
             {isEditing
               ? "Actualiza los datos e imágenes del producto."
@@ -154,217 +134,155 @@ export default function ProductForm() {
         </div>
       </div>
 
-      {/* Product information */}
       <Card>
         <CardHeader>
           <CardTitle>Información general</CardTitle>
         </CardHeader>
-
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* SKU / Name */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="sku">SKU</Label>
-
                 <Input
                   id="sku"
                   value={form.sku}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      sku: event.target.value,
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, sku: e.target.value })}
                   required
                 />
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="name">Nombre</Label>
-
                 <Input
                   id="name"
                   value={form.name}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      name: event.target.value,
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                   required
                 />
               </div>
             </div>
 
-            {/* Description */}
             <div className="space-y-1.5">
               <Label htmlFor="description">Descripción</Label>
-
               <Textarea
                 id="description"
                 rows={3}
                 value={form.description}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    description: event.target.value,
-                  })
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
                 }
               />
             </div>
 
-            {/* Price / Cost / Stock */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="space-y-1.5">
                 <Label htmlFor="price">Precio</Label>
-
                 <Input
                   id="price"
                   type="number"
                   step="0.01"
                   min="0"
                   value={form.price}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      price: event.target.value,
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
                   required
                 />
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="cost">Costo</Label>
-
                 <Input
                   id="cost"
                   type="number"
                   step="0.01"
                   min="0"
                   value={form.cost}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      cost: event.target.value,
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, cost: e.target.value })}
                 />
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="stock">Stock</Label>
-
                 <Input
                   id="stock"
                   type="number"
                   min="0"
                   value={form.stock}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      stock: event.target.value,
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, stock: e.target.value })}
                   required
                 />
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="minStock">Stock mínimo</Label>
-
                 <Input
                   id="minStock"
                   type="number"
                   min="0"
                   value={form.minStock}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      minStock: event.target.value,
-                    })
+                  onChange={(e) =>
+                    setForm({ ...form, minStock: e.target.value })
                   }
                   required
                 />
               </div>
             </div>
 
-            {/* Category / Active */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="category">Categoría</Label>
-
+                <Label>Categoría</Label>
                 <Select
                   value={form.categoryId}
                   onValueChange={(value) =>
-                    setForm({
-                      ...form,
-                      categoryId: value,
-                    })
+                    setForm({ ...form, categoryId: value })
                   }
                 >
-                  <SelectTrigger id="category">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecciona una categoría" />
                   </SelectTrigger>
-
                   <SelectContent>
-                    {categories?.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
+                    {categories?.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+              <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
                 <div>
                   <Label htmlFor="active">Producto activo</Label>
-
                   <p className="text-xs text-muted-foreground">
                     Visible para venta/inventario
                   </p>
                 </div>
-
                 <Switch
                   id="active"
                   checked={form.active}
                   onCheckedChange={(checked) =>
-                    setForm({
-                      ...form,
-                      active: checked,
-                    })
+                    setForm({ ...form, active: checked })
                   }
                 />
               </div>
             </div>
 
-            {/* Error */}
             {error && (
-              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
               </p>
             )}
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => navigate("/products")}
               >
                 Cancelar
               </Button>
-
               <Button
                 type="submit"
+                className="w-full sm:w-auto"
                 disabled={saveMutation.isPending || !form.categoryId}
               >
-                {saveMutation.isPending && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-
+                {saveMutation.isPending && <Loader2 className="animate-spin" />}
                 {isEditing ? "Guardar cambios" : "Crear producto"}
               </Button>
             </div>
@@ -372,20 +290,17 @@ export default function ProductForm() {
         </CardContent>
       </Card>
 
-      {/* Images */}
       {isEditing && product && (
         <Card>
           <CardHeader>
             <CardTitle>Imágenes</CardTitle>
           </CardHeader>
-
           <CardContent>
             <ImageUploader productId={product.id} images={product.images} />
           </CardContent>
         </Card>
       )}
 
-      {/* New product message */}
       {!isEditing && (
         <p className="text-center text-xs text-muted-foreground">
           Guarda el producto primero para poder subir sus imágenes.

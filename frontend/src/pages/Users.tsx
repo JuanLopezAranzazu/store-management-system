@@ -28,6 +28,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -43,6 +44,7 @@ export default function Users() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
@@ -75,12 +77,15 @@ export default function Users() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] })
       toast.add({ title: "Usuario eliminado", type: "success" })
+      setDeleteTarget(null)
     },
-    onError: (err: any) =>
+    onError: (err: any) => {
       toast.add({
         title: err.response?.data?.message ?? "No se pudo eliminar.",
         type: "error",
-      }),
+      })
+      setDeleteTarget(null)
+    },
   })
 
   function handleSubmit(e: React.FormEvent) {
@@ -91,7 +96,7 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-heading text-xl font-medium tracking-tight">
             Usuarios
@@ -118,10 +123,10 @@ export default function Users() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Activo</TableHead>
-                <TableHead>Creado</TableHead>
+                <TableHead className="hidden lg:table-cell">Creado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -138,8 +143,13 @@ export default function Users() {
               )}
               {users?.map((u) => (
                 <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="font-medium">
+                    {u.name}
+                    <p className="text-xs font-normal text-muted-foreground md:hidden">
+                      {u.email}
+                    </p>
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {u.email}
                   </TableCell>
                   <TableCell>
@@ -161,7 +171,7 @@ export default function Users() {
                       }
                     />
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {formatDate(u.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
@@ -170,11 +180,7 @@ export default function Users() {
                       size="icon-sm"
                       disabled={u.id === currentUser?.id}
                       className="text-destructive hover:text-destructive disabled:text-muted-foreground"
-                      onClick={() => {
-                        if (confirm(`¿Eliminar al usuario "${u.name}"?`)) {
-                          deleteMutation.mutate(u.id)
-                        }
-                      }}
+                      onClick={() => setDeleteTarget(u)}
                     >
                       <Trash2 />
                     </Button>
@@ -253,6 +259,36 @@ export default function Users() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar usuario</DialogTitle>
+            <DialogDescription>
+              ¿Seguro que quieres eliminar a{" "}
+              <strong>{deleteTarget?.name}</strong>? Esta acción no se puede
+              deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() =>
+                deleteTarget && deleteMutation.mutate(deleteTarget.id)
+              }
+            >
+              Eliminar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
